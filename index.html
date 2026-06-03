@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description"
+        content="viaGO - Sistema de peaje automático. Recarga, consulta tarifas y gestiona tus viajes.">
+    <title>viaGO · Peaje Automático</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div id="app-container">
+        <main id="view-container">
+
+            <!-- ========== SPLASH ========== -->
+            <div id="view-splash" class="view active">
+                <i class="fa-solid fa-road splash-logo"></i>
+                <h1 class="splash-title">viaGO</h1>
+                <p class="splash-sub">Peaje Automático</p>
+                <div class="splash-loader"></div>
+            </div>
+
+            <!-- ========== ONBOARDING ========== -->
+            <div id="view-onboarding" class="view">
+                <div class="onboarding-slides" id="onboarding-content"></div>
+                <div class="onboarding-dots" id="onboarding-dots"></div>
+                <div class="onboarding-actions">
+                    <button class="btn btn-primary" id="btn-onboarding-next">Siguiente <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- ========== LOGIN ========== -->
+            <div id="view-login" class="view auth-view">
+                <div class="auth-logo">
+                    <i class="fa-solid fa-road"></i>
+                    <h2>viaGO</h2>
+                    <p>Peaje Automático</p>
+                </div>
+                <form id="form-login" onsubmit="event.preventDefault(); app.login();">
+                    <div class="form-group">
+                        <label for="login-email">Correo electrónico</label>
+                        <input type="email" id="login-email" class="form-control" required
+                            placeholder="usuario@correo.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Contraseña</label>
+                        <input type="password" id="login-password" class="form-control" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary mb-3" id="btn-login">ENTRAR</button>
+                    <p class="text-center">
+                        <a href="#" class="link" onclick="app.navigate('register')">¿No tienes cuenta?
+                            <strong>Regístrate</strong></a>
+                    </p>
+                </form>
+            </div>
+
+            <!-- ========== REGISTER ========== -->
+            <div id="view-register" class="view auth-view">
+                <div class="page-header">
+                    <button class="btn-back" onclick="app.navigate('login')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h2 class="page-title">Crear Cuenta</h2>
+                </div>
+                <form id="form-register" onsubmit="event.preventDefault(); app.register();">
+                    <div class="form-group">
+                        <label for="reg-name">Nombre Completo</label>
+                        <input type="text" id="reg-name" class="form-control" required
+                            placeholder="Ej: María Rodríguez">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-cedula">Cédula</label>
+                        <input type="text" id="reg-cedula" class="form-control" required placeholder="V-12345678">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-telefono">Teléfono</label>
+                        <input type="tel" id="reg-telefono" class="form-control" required placeholder="0412-1234567">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Correo electrónico</label>
+                        <input type="email" id="reg-email" class="form-control" required
+                            placeholder="usuario@correo.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Contraseña</label>
+                        <input type="password" id="reg-password" class="form-control" required
+                            placeholder="Mínimo 6 caracteres" minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary mb-2" id="btn-register">CREAR CUENTA</button>
+                    <p class="text-center">
+                        <a href="#" class="link link-muted" onclick="app.navigate('login')">Volver al login</a>
+                    </p>
+                </form>
+            </div>
+
+            <!-- ========== DASHBOARD ========== -->
+            <div id="view-dashboard" class="view">
+                <div class="dash-header">
+                    <h3>¡Hola, <strong id="dash-name"></strong>!</h3>
+                    <div class="notif-wrapper">
+                        <div class="bell" onclick="app.toggleNotifications()">
+                            <i class="fa-regular fa-bell"></i>
+                            <div class="badge" id="notif-badge"></div>
+                        </div>
+                        <div class="notif-dropdown" id="notif-dropdown">
+                            <div class="notif-header">
+                                <strong>Notificaciones</strong>
+                                <button class="notif-clear" onclick="app.clearNotifications()">Marcar leídas</button>
+                            </div>
+                            <ul class="notif-list" id="notif-list">
+                                <li class="notif-empty"><i class="fa-regular fa-bell-slash"></i> Sin notificaciones</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="balance-card">
+                    <p class="balance-label">Saldo Total</p>
+                    <h1 class="balance-amount" id="dash-balance">0.00 Bs</h1>
+                </div>
+
+                <p class="section-title">Acceso Directo</p>
+                <div class="action-grid">
+                    <div class="action-card" onclick="app.navigate('recharge')">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span>Recarga</span>
+                    </div>
+                    <div class="action-card" onclick="app.navigate('movements')">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Historial</span>
+                    </div>
+                    <div class="action-card" onclick="app.navigate('tariffs')">
+                        <i class="fa-solid fa-tags"></i>
+                        <span>Tarifas</span>
+                    </div>
+                    <div class="action-card" onclick="app.navigate('map')">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <span>Mapa</span>
+                    </div>
+                    <div class="action-card" onclick="app.navigate('vehicles')">
+                        <i class="fa-solid fa-car"></i>
+                        <span>Vehículos</span>
+                    </div>
+                    <div class="action-card" onclick="app.navigate('simulator')">
+                        <i class="fa-solid fa-road-barrier"></i>
+                        <span>Simulador</span>
+                    </div>
+                </div>
+
+                <p class="section-title">Últimos Movimientos</p>
+                <ul class="tx-list" id="dash-recent-tx">
+                    <li class="empty-state">
+                        <i class="fa-regular fa-file-lines"></i>
+                        <p>Sin movimientos recientes</p>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ========== RECHARGE ========== -->
+            <div id="view-recharge" class="view">
+                <div class="page-header">
+                    <button class="btn-back" onclick="app.navigate('dashboard')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h2 class="page-title">Recarga de Saldo</h2>
+                </div>
+                <div class="info-card mb-3">
+                    <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:4px;">Saldo actual</p>
+                    <h2 id="recharge-balance" style="color:var(--primary); font-weight:700;">0.00 Bs</h2>
+                </div>
+                <form id="form-recharge" onsubmit="event.preventDefault(); app.recharge();">
+                    <div class="form-group">
+                        <label for="recharge-method">Método de Pago</label>
+                        <select id="recharge-method" class="form-control">
+                            <option value="Pago Móvil">Pago Móvil</option>
+                            <option value="Transferencia">Transferencia Bancaria</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="recharge-amount">Monto (Bs)</label>
+                        <input type="number" id="recharge-amount" class="form-control" required min="1" step="0.01"
+                            placeholder="0.00">
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-recharge">Confirmar Recarga</button>
+                </form>
+            </div>
+
+            <!-- ========== MOVEMENTS ========== -->
+            <div id="view-movements" class="view">
+                <div class="page-header">
+                    <button class="btn-back" onclick="app.navigate('dashboard')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h2 class="page-title">Movimientos</h2>
+                </div>
+                <div class="tab-bar">
+                    <button class="tab-btn active" id="tab-btn-list" onclick="app.switchMovementTab('list')">Historial</button>
+                    <button class="tab-btn" id="tab-btn-stats" onclick="app.switchMovementTab('stats')">Estadísticas</button>
+                </div>
+                <div id="movements-list-tab">
+                    <ul class="tx-list" id="movements-list">
+                        <li class="empty-state">
+                            <i class="fa-regular fa-file-lines"></i>
+                            <p>Sin movimientos</p>
+                        </li>
+                    </ul>
+                </div>
+                <div id="movements-stats-tab" class="hidden">
+                    <div class="info-card">
+                        <h3 class="stats-title">Resumen de Consumo</h3>
+                        <div class="stats-summary-grid">
+                            <div class="stats-box">
+                                <span class="stats-label">Recargado</span>
+                                <strong class="stats-val positive" id="stats-total-recharge">0.00 Bs</strong>
+                            </div>
+                            <div class="stats-box">
+                                <span class="stats-label">Gastado</span>
+                                <strong class="stats-val negative" id="stats-total-paid">0.00 Bs</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <h3 class="stats-title">Últimos Cobros (Bs)</h3>
+                        <div id="stats-chart-container" class="chart-container">
+                            <!-- SVG dynamically rendered -->
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <h3 class="stats-title">Peajes Más Visitados</h3>
+                        <div id="stats-top-tolls" class="top-tolls-list">
+                            <!-- List dynamically rendered -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== TARIFFS ========== -->
+            <div id="view-tariffs" class="view">
+                <div class="page-header">
+                    <button class="btn-back" onclick="app.navigate('dashboard')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h2 class="page-title">Tarifas de Peaje</h2>
+                </div>
+                <div class="info-card">
+                    <table class="tariff-table">
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Tarifa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><i class="fa-solid fa-car" style="color:var(--primary);margin-right:6px;"></i>
+                                    Livianos</td>
+                                <td>120.00 Bs</td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-van-shuttle"
+                                        style="color:var(--primary);margin-right:6px;"></i> Microbuses</td>
+                                <td>200.00 Bs</td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-bus" style="color:var(--primary);margin-right:6px;"></i>
+                                    Autobuses</td>
+                                <td>350.00 Bs</td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-truck" style="color:var(--primary);margin-right:6px;"></i>
+                                    Camiones 2 ejes</td>
+                                <td>280.00 Bs</td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-truck-moving"
+                                        style="color:var(--primary);margin-right:6px;"></i> Camiones 3+ ejes</td>
+                                <td>450.00 Bs</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ========== MAP ========== -->
+            <div id="view-map" class="view" style="padding: 0; position: relative;">
+                <div style="position: absolute; top: 15px; left: 15px; z-index: 1000; display: flex; gap: 10px;">
+                    <button class="btn-circle" style="width: 40px; height: 40px; font-size: 1rem; box-shadow: var(--shadow-md);" onclick="app.navigate('dashboard')">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button class="btn-circle" style="width: 40px; height: 40px; font-size: 1rem; box-shadow: var(--shadow-md); background: white; color: var(--primary);" onclick="app.locateUser()" id="btn-locate">
+                        <i class="fa-solid fa-location-crosshairs"></i>
+                    </button>
+                </div>
+
+                <div id="peajes-map" style="width: 100%; height: 100%; min-height: 100vh; z-index: 1;"></div>
+
+                <!-- Nav Info Card -->
+                <div id="nav-info-card" style="position: absolute; bottom: 85px; left: 15px; right: 15px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 1000; padding: 18px; display: none;">
+                    <h4 style="margin: 0 0 6px 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Próximo Peaje</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <strong id="nav-peaje-name" style="font-size: 1.15rem; color: var(--text); display: block;">--</strong>
+                            <p id="nav-peaje-info" style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">--</p>
+                        </div>
+                        <div style="text-align: right; background: rgba(0, 86, 179, 0.05); padding: 8px 12px; border-radius: 10px;">
+                            <strong id="nav-dist" style="display: block; font-size: 1.1rem; color: var(--primary);">-- km</strong>
+                            <small id="nav-time" style="color: var(--warning); font-weight: 700; font-size: 0.8rem;">-- min</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== VEHICLES ========== -->
+            <div id="view-vehicles" class="view">
+                <div class="page-header">
+                    <button class="btn-back" onclick="app.navigate('dashboard')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h2 class="page-title">Mis Vehículos</h2>
+                </div>
+                <div id="vehicles-list"></div>
+                <button class="btn btn-outline mt-2" onclick="app.navigate('add-vehicle')"><i
+                        class="fa-solid fa-plus"></i> Registrar Vehículo</button>
+            </div>
+
+            <!-- ========== ADD VEHICLE ========== -->
+            <div id="view-add-vehicle" class="view">
+                <div class="page-header">
+                    <button class="btn-back" onclick="app.navigate('vehicles')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h2 class="page-title">Registrar Vehículo</h2>
+                </div>
+                <form id="form-vehicle" onsubmit="event.preventDefault(); app.addVehicle();">
+                    <div class="form-group">
+                        <label for="v-marca">Marca</label>
+                        <input type="text" id="v-marca" class="form-control" required placeholder="Ej: Toyota">
+                    </div>
+                    <div class="form-group">
+                        <label for="v-placa">Placa</label>
+                        <input type="text" id="v-placa" class="form-control" required placeholder="Ej: ABC123">
+                    </div>
+                    <div class="form-group">
+                        <label for="v-serial">Serial</label>
+                        <input type="text" id="v-serial" class="form-control" required placeholder="Nro de serial">
+                    </div>
+                    <div class="form-group">
+                        <label for="v-color">Color</label>
+                        <input type="text" id="v-color" class="form-control" required placeholder="Ej: Blanco">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Registrar</button>
+                </form>
+            </div>
+
+            <!-- ========== PROFILE ========== -->
+            <div id="view-profile" class="view">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profile-avatar"></div>
+                    <p class="profile-name" id="profile-name"></p>
+                    <p class="profile-email" id="profile-email"></p>
+                </div>
+                <div class="info-card">
+                    <div class="info-row"><span class="info-label">Cédula</span><span class="info-value"
+                            id="profile-cedula">—</span></div>
+                    <div class="info-row"><span class="info-label">Teléfono</span><span class="info-value"
+                            id="profile-telefono">—</span></div>
+                    <div class="info-row"><span class="info-label">Saldo</span><span class="info-value"
+                            id="profile-saldo" style="color:var(--primary)">—</span></div>
+                </div>
+            </div>
+
+            <!-- ========== MENU / SETTINGS ========== -->
+            <div id="view-menu" class="view">
+                <h2 style="font-weight:700; margin-bottom:20px; color:var(--text);">Ajustes</h2>
+                <ul class="menu-list">
+                    <li class="menu-item" onclick="app.navigate('profile')">
+                        <i class="fa-solid fa-user-gear"></i>
+                        <span>Mi Cuenta</span>
+                        <i class="fa-solid fa-chevron-right chevron"></i>
+                    </li>
+                    <li class="menu-item" onclick="app.navigate('vehicles')">
+                        <i class="fa-solid fa-car"></i>
+                        <span>Mis Vehículos</span>
+                        <i class="fa-solid fa-chevron-right chevron"></i>
+                    </li>
+                    <li class="menu-item" onclick="app.navigate('tariffs')">
+                        <i class="fa-solid fa-tags"></i>
+                        <span>Tarifas</span>
+                        <i class="fa-solid fa-chevron-right chevron"></i>
+                    </li>
+                    <li class="menu-item" onclick="app.toggleDarkMode()">
+                        <i class="fa-solid fa-moon"></i>
+                        <span>Modo Oscuro</span>
+                        <div class="toggle-switch" id="dark-mode-switch"></div>
+                    </li>
+                    <li class="menu-item" onclick="app.toast('Atención al cliente: 0800-VIAGO')">
+                        <i class="fa-solid fa-headset"></i>
+                        <span>Atención al Cliente</span>
+                        <i class="fa-solid fa-chevron-right chevron"></i>
+                    </li>
+                    <li class="menu-item" onclick="app.showLogoutModal()" style="color:var(--error);">
+                        <i class="fa-solid fa-right-from-bracket" style="color:var(--error);"></i>
+                        <span style="color:var(--error);">Cerrar Sesión</span>
+                        <i class="fa-solid fa-chevron-right chevron" style="color:var(--error);"></i>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ========== SIMULATOR ========== -->
+            <div id="view-simulator" class="view">
+                <div class="page-header">
+                    <button class="btn-back" onclick="app.navigate('dashboard')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h2 class="page-title">Simulador de Peaje</h2>
+                </div>
+                <div id="sim-setup">
+                    <div class="form-group">
+                        <label for="sim-vehicle">Selecciona tu Vehículo</label>
+                        <select id="sim-vehicle" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sim-category">Categoría (Tarifa)</label>
+                        <select id="sim-category" class="form-control">
+                            <option value="120.00">Livianos (120.00 Bs)</option>
+                            <option value="200.00">Microbuses (200.00 Bs)</option>
+                            <option value="350.00">Autobuses (350.00 Bs)</option>
+                            <option value="280.00">Camiones 2 ejes (280.00 Bs)</option>
+                            <option value="450.00">Camiones 3+ ejes (450.00 Bs)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sim-toll">Selecciona el Peaje</label>
+                        <select id="sim-toll" class="form-control"></select>
+                    </div>
+                    <button class="btn btn-primary" onclick="app.startTollSimulation()" id="btn-start-sim">Iniciar Simulación</button>
+                </div>
+
+                <!-- Simulation Visual Board -->
+                <div id="sim-board" class="sim-board mt-3">
+                    <div class="sim-gate-container">
+                        <div class="sim-toll-booth">
+                            <div class="sim-lcd" id="sim-lcd-screen">Listo para escanear</div>
+                            <div class="sim-semaphore">
+                                <div class="light red active" id="light-red"></div>
+                                <div class="light green" id="light-green"></div>
+                            </div>
+                        </div>
+                        <div class="sim-bar-barrier" id="sim-barrier"></div>
+                    </div>
+                    <div class="sim-road">
+                        <div class="sim-car-anim" id="sim-car">
+                            <i class="fa-solid fa-car"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ========== BOTTOM NAV ========== -->
+        <nav id="bottom-nav" class="hidden">
+            <button class="nav-item active" data-view="dashboard" onclick="app.navigate('dashboard')">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </button>
+            <button class="nav-item" data-view="map" onclick="app.navigate('map')">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>Mapa</span>
+            </button>
+            <button class="nav-item" data-view="profile" onclick="app.navigate('profile')">
+                <i class="fa-solid fa-user"></i>
+                <span>Perfil</span>
+            </button>
+            <button class="nav-item" data-view="menu" onclick="app.navigate('menu')">
+                <i class="fa-solid fa-bars"></i>
+                <span>Menú</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ========== LOGOUT MODAL ========== -->
+    <div class="modal-overlay" id="modal-logout">
+        <div class="modal-box">
+            <i class="fa-solid fa-right-from-bracket" style="color:var(--error);"></i>
+            <h3>¿Cerrar sesión?</h3>
+            <p>¿Estás seguro de que deseas salir de tu cuenta?</p>
+            <div class="modal-btns">
+                <button class="btn btn-outline btn-sm" onclick="app.closeModal('modal-logout')">NO</button>
+                <button class="btn btn-danger btn-sm" onclick="app.logout()">SÍ, SALIR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TOAST ========== -->
+    <div class="toast" id="toast-msg"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
