@@ -21,6 +21,9 @@ const app = {
 
     // ===== ONLINE/OFFLINE DETECTOR =====
     isOnline() {
+        if (window.location.hostname.endsWith('github.io')) {
+            return false;
+        }
         return window.location.protocol.startsWith('http');
     },
 
